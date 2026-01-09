@@ -1,70 +1,64 @@
-# Getting Started with Create React App
+# DigitalEducas
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Plataforma educativa con un frontend en React y una API REST en Django.
 
-## Available Scripts
+## Estructura
 
-In the project directory, you can run:
+```text
+src/                 # Interfaz React
+backend/users/       # Usuarios, verificación y autenticación JWT
+backend/courses/     # Cursos, lecciones, cuestionarios y certificados
+backend/payments/    # Módulo reservado; no está habilitado todavía
+```
 
-### `npm start`
+## Inicio rápido
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Backend
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Requiere Python 3.11+ y PostgreSQL. Desde `backend`:
 
-### `npm test`
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Edita `backend/.env` con las credenciales locales de PostgreSQL y SMTP. Nunca subas este archivo al repositorio. Después ejecuta:
 
-### `npm run build`
+```powershell
+python manage.py migrate
+python manage.py runserver
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+La API queda en `http://localhost:8000/api/`.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Frontend
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Desde la raíz del repositorio:
 
-### `npm run eject`
+```powershell
+npm install
+npm start
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+La aplicación se abre en `http://localhost:3000` y consulta la API de desarrollo. Si tu API usa otra dirección, crea un archivo `.env.local` con:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```text
+REACT_APP_API_URL=http://localhost:8000/api
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Endpoints disponibles
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- `POST /api/register/`, `POST /api/verify/`
+- `POST /api/forgot-password/`, `POST /api/reset-password/`
+- `POST /api/token/`, `POST /api/token/refresh/`
+- `GET /api/courses/`, `GET /api/courses/:id/`, `GET /api/courses/:id/quiz/`
+- `POST /api/courses/:id/submit/` (requiere JWT)
 
-## Learn More
+## Seguridad y despliegue
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Configura `DJANGO_DEBUG=False`, `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` y `CSRF_TRUSTED_ORIGINS` en producción.
+- Los códigos de verificación expiran en 15 minutos por defecto y los endpoints sensibles están limitados por IP.
+- Ejecuta `npm test -- --watchAll=false` y `python manage.py check` antes de desplegar.
+- El módulo de pagos permanece en el repositorio, pero está deshabilitado hasta definir el proveedor y el flujo de cobro.

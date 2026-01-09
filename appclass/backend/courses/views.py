@@ -1,15 +1,11 @@
-from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .models import Course
 from .models import Question, Certificate, Option, Enrollment
-from django.utils import timezone
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from .serializers import CourseSerializer, QuestionSerializer
-from .serializers import QuestionSerializer
-from rest_framework import status
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticatedOrReadOnly])
@@ -32,7 +28,7 @@ def course_detail(request, pk):
 @permission_classes([IsAuthenticatedOrReadOnly])
 def course_quiz(request, pk):
     try:
-        course = Course.objects.get(pk=pk)
+        course = Course.objects.get(pk=pk, is_active=True)
         questions = course.questions.all()
         serializer = QuestionSerializer(questions, many=True)
         return Response(serializer.data)
@@ -47,9 +43,15 @@ def submit_quiz(request, pk):
     user = request.user
     answers = request.data.get('answers', {})
 
+    if not isinstance(answers, dict):
+        return Response({"error": "Las respuestas deben enviarse como un objeto."}, status=400)
+
     try:
-        course = Course.objects.get(pk=pk)
+        course = Course.objects.get(pk=pk, is_active=True)
         questions = course.questions.all()
+
+        if not questions.exists():
+            return Response({"error": "El curso no tiene preguntas configuradas."}, status=400)
 
         correct = 0
         for question in questions:

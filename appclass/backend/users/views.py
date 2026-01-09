@@ -1,16 +1,41 @@
-from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import throttle_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from rest_framework.decorators import api_view
 from django.core.mail import send_mail
 from django.conf import settings
 from .serializers import UserRegisterSerializer
 from .models import User
 from django.utils import timezone
 from datetime import timedelta
-import random
+import secrets
+
+from .throttles import PasswordRecoveryThrottle, RegistrationThrottle, VerificationThrottle
+
+
+def generate_verification_code():
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def code_is_valid(user, code):
+    return (
+        bool(code)
+        and bool(user.verification_code)
+        and secrets.compare_digest(user.verification_code, str(code))
+        and user.verification_code_expires_at is not None
+        and user.verification_code_expires_at >= timezone.now()
+    )
+
+
+def set_verification_code(user):
+    code = generate_verification_code()
+    user.verification_code = code
+    user.verification_code_expires_at = timezone.now() + timedelta(
+        minutes=settings.VERIFICATION_CODE_TTL_MINUTES
+    )
+    user.save(update_fields=['verification_code', 'verification_code_expires_at'])
+    return code
 
 
 @api_view(['GET'])
@@ -21,16 +46,16 @@ def api_home(request):
 
 # === Registro de usuario con envío de código ===
 @api_view(['POST'])
+@throttle_classes([RegistrationThrottle])
 def register_user(request):
     serializer = UserRegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
 
         # Generar código de verificación
-        code = str(random.randint(100000, 999999))
-        user.verification_code = code
         user.is_verified = False
-        user.save()
+        user.save(update_fields=['is_verified'])
+        code = set_verification_code(user)
 
         # Enviar correo con el código
         subject = "Verificación de cuenta - DigitalEducas"
@@ -46,16 +71,18 @@ def register_user(request):
 
 # === Verificación del código ===
 @api_view(['POST'])
+@throttle_classes([VerificationThrottle])
 def verify_code(request):
     email = request.data.get('email')
     code = request.data.get('code')
 
     try:
         user = User.objects.get(email=email)
-        if user.verification_code == code:
+        if code_is_valid(user, code):
             user.is_verified = True
             user.verification_code = None
-            user.save()
+            user.verification_code_expires_at = None
+            user.save(update_fields=['is_verified', 'verification_code', 'verification_code_expires_at'])
             return Response({"message": "Cuenta verificada correctamente."}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Código incorrecto."}, status=status.HTTP_400_BAD_REQUEST)
@@ -64,14 +91,13 @@ def verify_code(request):
     
 # === Solicitud de recuperación ===
 @api_view(['POST'])
+@throttle_classes([PasswordRecoveryThrottle])
 def forgot_password(request):
     email = request.data.get('email')
     try:
         user = User.objects.get(email=email)
         # Generar código temporal
-        code = str(random.randint(100000, 999999))
-        user.verification_code = code
-        user.save()
+        code = set_verification_code(user)
 
         subject = "Recuperación de contraseña - DigitalEducas"
         message = (
@@ -90,6 +116,7 @@ def forgot_password(request):
         return Response({"error": "No existe una cuenta con ese correo."}, status=status.HTTP_404_NOT_FOUND)
     
 @api_view(['POST'])
+@throttle_classes([PasswordRecoveryThrottle])
 def reset_password(request):
     email = request.data.get('email')
     code = request.data.get('code')
@@ -97,13 +124,14 @@ def reset_password(request):
 
     try:
         user = User.objects.get(email=email)
-        if user.verification_code != code:
-            return Response({"error": "El código de verificación es incorrecto."}, status=status.HTTP_400_BAD_REQUEST)
+        if not code_is_valid(user, code):
+            return Response({"error": "El código de verificación es incorrecto o expiró."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Cambiar contraseña
         user.set_password(new_password)
         user.verification_code = None
-        user.save()
+        user.verification_code_expires_at = None
+        user.save(update_fields=['password', 'verification_code', 'verification_code_expires_at'])
 
         return Response({"message": "Tu contraseña se ha restablecido correctamente."}, status=status.HTTP_200_OK)
     except User.DoesNotExist:

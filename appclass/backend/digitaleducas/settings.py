@@ -12,21 +12,41 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
+
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.utils import get_random_secret_key
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
+
+
+def env_bool(name, default=False):
+    return os.getenv(name, str(default)).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def env_list(name, default=''):
+    return [value.strip() for value in os.getenv(name, default).split(',') if value.strip()]
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-$ue3m^gnv5t6*3ie5&3cb&rw1^nsq2zv@d9-$i=90n6ythd)-1'
+DEBUG = env_bool('DJANGO_DEBUG', True)
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+
+if not SECRET_KEY:
+    if DEBUG:
+        # Evita que una clave de desarrollo llegue al repositorio.
+        SECRET_KEY = get_random_secret_key()
+    else:
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY es obligatoria cuando DJANGO_DEBUG=False.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS')
 
 
 # Application definition
@@ -44,11 +64,11 @@ INSTALLED_APPS = [
 
     'users',
     'courses',
-    'payments',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -57,9 +77,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # dominio del frontend React
-]
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:3000')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 
 ROOT_URLCONF = 'digitaleducas.urls'
 
@@ -87,11 +106,11 @@ WSGI_APPLICATION = 'digitaleducas.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'digitaleducas',
-        'USER': 'educas_user',
-        'PASSWORD': '216749Ad',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('POSTGRES_DB', 'digitaleducas'),
+        'USER': os.getenv('POSTGRES_USER', 'educas_user'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
 
@@ -141,6 +160,11 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'registration': '5/hour',
+        'verification': '10/hour',
+        'password_recovery': '5/hour',
+    },
 }
 
 SIMPLE_JWT = {
@@ -153,11 +177,14 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'users.User'
 
+VERIFICATION_CODE_TTL_MINUTES = int(os.getenv('VERIFICATION_CODE_TTL_MINUTES', '15'))
+
 # === Configuración de correo ===
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'anthonygrefa2005@gmail.com'          # tu correo Gmail
-EMAIL_HOST_PASSWORD = 'kyvc hygy nyba hxsm'   # usa una contraseña de aplicación de Google
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))

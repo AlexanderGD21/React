@@ -1,38 +1,164 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+.app-shell {
+  box-sizing: border-box;
+  max-width: 1100px;
   min-height: 100vh;
+  margin: 0 auto;
+  padding: 64px 24px;
+}
+
+.hero {
+  margin-bottom: 52px;
+}
+
+.hero-topbar,
+.panel-heading {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.App-link {
-  color: #61dafb;
+.eyebrow {
+  margin: 0 0 8px;
+  color: #315bba;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.hero h1,
+h2,
+h3 {
+  color: #17233c;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  letter-spacing: -0.06em;
+}
+
+.hero p:not(.eyebrow) {
+  max-width: 560px;
+  color: #536077;
+  font-size: 1.1rem;
+}
+
+.button-primary,
+.button-secondary,
+.close-button {
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.button-primary {
+  padding: 10px 16px;
+  background: #315bba;
+  color: #fff;
+}
+
+.button-primary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.button-secondary {
+  padding: 9px 14px;
+  background: #e9effd;
+  color: #244997;
+}
+
+.welcome {
+  color: #315bba;
+  font-weight: 700;
+}
+
+.login-panel {
+  max-width: 480px;
+  margin: -20px 0 42px;
+  padding: 24px;
+  border: 1px solid #dbe1ec;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.login-panel h2 {
+  margin: 0 0 20px;
+}
+
+.login-panel form {
+  display: grid;
+  gap: 8px;
+}
+
+.login-panel label {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.login-panel input {
+  padding: 10px;
+  border: 1px solid #aebbd1;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.login-panel .button-primary {
+  justify-self: start;
+  margin-top: 12px;
+}
+
+.close-button {
+  padding: 0 8px;
+  background: transparent;
+  color: #536077;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.course-card {
+  overflow: hidden;
+  border: 1px solid #dbe1ec;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 20px rgb(25 43 77 / 7%);
+}
+
+.course-card img {
+  display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.course-card div {
+  padding: 20px;
+}
+
+.course-card h3 {
+  margin: 0 0 8px;
+}
+
+.course-card p {
+  color: #536077;
+}
+
+.course-card span {
+  color: #315bba;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.message-error {
+  color: #9d1c1c;
 }
