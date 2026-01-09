@@ -21,3 +21,15 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# Archivos de Python
+__pycache__/
+*.pyc
+
+# Base de datos local (opcional, pero recomendado no subirla)
+db.sqlite3
+
+# Entorno virtual
+venv/
+env/
